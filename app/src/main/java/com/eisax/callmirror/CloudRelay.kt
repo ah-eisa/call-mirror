@@ -3,6 +3,8 @@ package com.eisax.callmirror
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -12,31 +14,36 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
+import java.util.Collections
+import java.util.LinkedHashMap
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 class CloudRelay(
     private val pairingSecret: String,
     private val onPayload: (MirrorPayload) -> Unit,
     private val onConnectionChanged: ((Boolean) -> Unit)? = null
 ) {
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + job)
     private val topic = CryptoUtils.topicFor(pairingSecret)
     private val wsClient = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
         .pingInterval(20, TimeUnit.SECONDS)
         .build()
-    private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(12, TimeUnit.SECONDS)
-        .writeTimeout(12, TimeUnit.SECONDS)
-        .readTimeout(12, TimeUnit.SECONDS)
-        .retryOnConnectionFailure(true)
-        .build()
+    private val httpClient = sharedHttpClient
 
     private var socket: WebSocket? = null
     @Volatile private var shouldStayConnected = false
 
+    private val recentMessageIds = Collections.synchronizedMap(
+        object : LinkedHashMap<String, Boolean>(256, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?): Boolean = size > 256
+        }
+    )
+
     fun connect() {
-        if (pairingSecret.length < 16) return
+        if (pairingSecret.length < 16 || socket != null) return
         shouldStayConnected = true
         val request = Request.Builder()
             .url("wss://ntfy.sh/$topic/ws")
@@ -52,16 +59,24 @@ class CloudRelay(
                 val encrypted = wrapped.optString("message")
                 if (encrypted.isBlank()) return
                 val plain = CryptoUtils.decrypt(encrypted, pairingSecret) ?: return
-                MirrorPayload.fromJson(plain)?.let(onPayload)
+                val payload = MirrorPayload.fromJson(plain) ?: return
+
+                val now = System.currentTimeMillis()
+                if (abs(now - payload.timestamp) > MAX_MESSAGE_AGE_MS) return
+                if (recentMessageIds.put(payload.messageId, true) != null) return
+
+                onPayload(payload)
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                socket = null
                 Log.w("CloudRelay", "Relay connection failed")
                 onConnectionChanged?.invoke(false)
                 reconnect()
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                socket = null
                 onConnectionChanged?.invoke(false)
                 reconnect()
             }
@@ -77,7 +92,8 @@ class CloudRelay(
                 val request = Request.Builder()
                     .url("https://ntfy.sh/$topic")
                     .post(body)
-                    .header("Cache-Control", "no-store")
+                    .header("Cache", "no")
+                    .header("Firebase", "no")
                     .build()
                 httpClient.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
@@ -94,13 +110,24 @@ class CloudRelay(
         shouldStayConnected = false
         socket?.close(1000, "closed")
         socket = null
+        job.cancel()
         onConnectionChanged?.invoke(false)
     }
 
     private fun reconnect() {
         if (!shouldStayConnected) return
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            if (shouldStayConnected) connect()
+            if (shouldStayConnected && socket == null) connect()
         }, 5000)
+    }
+
+    companion object {
+        private const val MAX_MESSAGE_AGE_MS = 10 * 60 * 1000L
+        private val sharedHttpClient = OkHttpClient.Builder()
+            .connectTimeout(12, TimeUnit.SECONDS)
+            .writeTimeout(12, TimeUnit.SECONDS)
+            .readTimeout(12, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
     }
 }
