@@ -5,7 +5,6 @@ import android.content.Context
 object MirrorPrefs {
     private const val FILE = "call_mirror_prefs"
     private const val KEY_ROLE = "role"
-    private const val KEY_SECRET = "pairing_secret"
     private const val KEY_MIRROR_NOTIFICATIONS = "mirror_notifications"
 
     const val ROLE_SENDER = "sender"
@@ -19,10 +18,10 @@ object MirrorPrefs {
         prefs(context).edit().putString(KEY_ROLE, role).apply()
     }
 
-    fun secret(context: Context): String = prefs(context).getString(KEY_SECRET, "") ?: ""
+    fun secret(context: Context): String = SecretStore.load(context)
 
     fun setSecret(context: Context, secret: String) {
-        prefs(context).edit().putString(KEY_SECRET, secret.trim()).apply()
+        SecretStore.save(context, secret.trim())
     }
 
     fun mirrorNotifications(context: Context): Boolean = prefs(context).getBoolean(KEY_MIRROR_NOTIFICATIONS, true)
