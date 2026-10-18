@@ -17,33 +17,43 @@ object CryptoUtils {
     private const val PBKDF2_ROUNDS = 210_000
     private val rng = SecureRandom()
 
-    fun encrypt(plainText: String, pairingSecret: String): String? = try {
-        require(pairingSecret.length >= 16)
-        val salt = ByteArray(SALT_LEN).also(rng::nextBytes)
-        val nonce = ByteArray(NONCE_LEN).also(rng::nextBytes)
-        val key = deriveKey(pairingSecret, salt)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(TAG_BITS, nonce))
-        val ciphertext = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
-        val packed = salt + nonce + ciphertext
-        PREFIX + Base64.encodeToString(packed, Base64.NO_WRAP)
-    } catch (_: Exception) {
-        null
+    fun encrypt(plainText: String, pairingSecret: String): String? {
+        return try {
+            require(pairingSecret.length >= 16)
+            val salt = ByteArray(SALT_LEN).also(rng::nextBytes)
+            val nonce = ByteArray(NONCE_LEN).also(rng::nextBytes)
+            val key = deriveKey(pairingSecret, salt)
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(TAG_BITS, nonce))
+            val ciphertext = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
+            val packed = salt + nonce + ciphertext
+            PREFIX + Base64.encodeToString(packed, Base64.NO_WRAP)
+        } catch (_: Exception) {
+            null
+        }
     }
 
-    fun decrypt(cipherText: String, pairingSecret: String): String? = try {
-        if (!cipherText.startsWith(PREFIX) || pairingSecret.length < 16) return null
-        val packed = Base64.decode(cipherText.removePrefix(PREFIX), Base64.NO_WRAP)
-        if (packed.size <= SALT_LEN + NONCE_LEN) return null
-        val salt = packed.copyOfRange(0, SALT_LEN)
-        val nonce = packed.copyOfRange(SALT_LEN, SALT_LEN + NONCE_LEN)
-        val encrypted = packed.copyOfRange(SALT_LEN + NONCE_LEN, packed.size)
-        val key = deriveKey(pairingSecret, salt)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_BITS, nonce))
-        String(cipher.doFinal(encrypted), Charsets.UTF_8)
-    } catch (_: Exception) {
-        null
+    fun decrypt(cipherText: String, pairingSecret: String): String? {
+        return try {
+            if (!cipherText.startsWith(PREFIX) || pairingSecret.length < 16) {
+                null
+            } else {
+                val packed = Base64.decode(cipherText.removePrefix(PREFIX), Base64.NO_WRAP)
+                if (packed.size <= SALT_LEN + NONCE_LEN) {
+                    null
+                } else {
+                    val salt = packed.copyOfRange(0, SALT_LEN)
+                    val nonce = packed.copyOfRange(SALT_LEN, SALT_LEN + NONCE_LEN)
+                    val encrypted = packed.copyOfRange(SALT_LEN + NONCE_LEN, packed.size)
+                    val key = deriveKey(pairingSecret, salt)
+                    val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+                    cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_BITS, nonce))
+                    String(cipher.doFinal(encrypted), Charsets.UTF_8)
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun topicFor(pairingSecret: String): String {
