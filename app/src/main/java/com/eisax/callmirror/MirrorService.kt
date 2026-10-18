@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 
 class MirrorService : Service() {
     private var relay: CloudRelay? = null
+    private var localServer: LocalServer? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -21,33 +22,44 @@ class MirrorService : Service() {
             NotificationCompat.Builder(this, "mirror_service")
                 .setSmallIcon(android.R.drawable.stat_notify_sync)
                 .setContentTitle("Call Mirror")
-                .setContentText("Secure sync is active")
+                .setContentText("Secure receiver is active")
                 .setSilent(true)
                 .setOngoing(true)
                 .build()
         )
-        refreshRelay()
+        refreshReceivers()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        refreshRelay()
+        refreshReceivers()
         return START_STICKY
     }
 
     override fun onDestroy() {
         relay?.close()
         relay = null
+        localServer?.close()
+        localServer = null
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun refreshRelay() {
+    private fun refreshReceivers() {
         relay?.close()
         relay = null
+        localServer?.close()
+        localServer = null
+
         if (MirrorPrefs.role(this) != MirrorPrefs.ROLE_RECEIVER) return
         val secret = MirrorPrefs.secret(this)
         if (secret.length < 16) return
-        relay = CloudRelay(secret, onPayload = { AlertPresenter.show(this, it) }).also { it.connect() }
+
+        val deliver: (MirrorPayload) -> Unit = { AlertPresenter.show(this, it) }
+        relay = CloudRelay(secret, onPayload = deliver).also { it.connect() }
+
+        if (MirrorPrefs.localEnabled(this)) {
+            localServer = LocalServer(MirrorPrefs.localPort(this), secret, deliver).also { it.start() }
+        }
     }
 }
