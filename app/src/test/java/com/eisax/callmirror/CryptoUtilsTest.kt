@@ -28,7 +28,8 @@ class CryptoUtilsTest {
     fun tamperedCiphertextFailsClosed() {
         val encrypted = CryptoUtils.encrypt("hello", secret)!!
         val packed = java.util.Base64.getDecoder().decode(encrypted.removePrefix("CM2:"))
-        packed[packed.size - 1] = (packed[packed.size - 1] ^ 1).toByte()
+        val index = packed.size - 1
+        packed[index] = packed[index].toInt().xor(1).toByte()
         val tampered = "CM2:" + java.util.Base64.getEncoder().encodeToString(packed)
         assertNull(CryptoUtils.decrypt(tampered, secret))
     }
@@ -37,7 +38,7 @@ class CryptoUtilsTest {
     fun tamperedSaltFailsClosed() {
         val encrypted = CryptoUtils.encrypt("hello", secret)!!
         val packed = java.util.Base64.getDecoder().decode(encrypted.removePrefix("CM2:"))
-        packed[0] = (packed[0] ^ 1).toByte()
+        packed[0] = packed[0].toInt().xor(1).toByte()
         val tampered = "CM2:" + java.util.Base64.getEncoder().encodeToString(packed)
         assertNull(CryptoUtils.decrypt(tampered, secret))
     }
