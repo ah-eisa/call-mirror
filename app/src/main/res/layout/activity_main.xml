@@ -24,7 +24,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Securely mirror calls, SMS and notifications between your Android devices."
+            android:text="Pair two phones once, then let Call Mirror handle the connection automatically."
             android:textColor="@color/cm_text_muted"
             android:textSize="15sp" />
 
@@ -47,7 +47,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1. Choose this phone's role"
+                    android:text="1. Which phone is this?"
                     android:textColor="@color/cm_text"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -57,7 +57,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Transmitter sends alerts from this phone. Receiver shows them on your primary phone."
                     android:textColor="@color/cm_text_muted"
                     android:textSize="13sp" />
 
@@ -73,7 +72,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:paddingVertical="8dp"
-                        android:text="Transmitter  •  phone left at home"
+                        android:text="Phone with the SIM / messages"
                         android:textColor="@color/cm_text" />
 
                     <RadioButton
@@ -81,7 +80,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:paddingVertical="8dp"
-                        android:text="Receiver  •  your primary phone"
+                        android:text="Phone I carry with me"
                         android:textColor="@color/cm_text" />
                 </RadioGroup>
             </LinearLayout>
@@ -106,7 +105,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="2. Pair your devices"
+                    android:text="2. Pair the phones"
                     android:textColor="@color/cm_text"
                     android:textSize="17sp"
                     android:textStyle="bold" />
@@ -115,7 +114,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Use the exact same sync key on both phones."
+                    android:text="Generate a QR on the SIM phone and scan it on your primary phone."
                     android:textColor="@color/cm_text_muted"
                     android:textSize="13sp" />
 
@@ -125,7 +124,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:hint="Sync key"
+                    android:hint="Pairing key"
                     app:endIconMode="password_toggle">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -144,6 +143,30 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Generate secure key" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/showQrButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Show pairing QR" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/scanQrButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Scan pairing QR" />
+
+                <ImageView
+                    android:id="@+id/qrImage"
+                    android:layout_width="220dp"
+                    android:layout_height="220dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="14dp"
+                    android:contentDescription="Pairing QR code"
+                    android:visibility="gone" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -171,20 +194,48 @@
                     android:textSize="17sp"
                     android:textStyle="bold" />
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Automatic secure cloud connection. Local / hotspot can be enabled only if you want it."
+                    android:textColor="@color/cm_text_muted"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/advancedButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Advanced connection settings" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/advancedConnectionCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/cm_surface"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/cm_border"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/localModeSwitch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
                     android:text="Prefer local / hotspot when available"
                     android:textColor="@color/cm_text" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Local first for speed. Secure cloud remains the fallback when devices are apart."
-                    android:textColor="@color/cm_text_muted"
-                    android:textSize="12sp" />
 
                 <LinearLayout
                     android:id="@+id/localSenderFields"
@@ -256,7 +307,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:checked="true"
-                    android:text="Mirror notifications and SMS alerts"
+                    android:text="Messages and notifications"
                     android:textColor="@color/cm_text" />
 
                 <com.google.android.material.button.MaterialButton
@@ -300,7 +351,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:checked="true"
-                    android:text="Play ringtone for mirrored calls"
+                    android:text="Ring for mirrored calls"
                     android:textColor="@color/cm_text" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
@@ -308,7 +359,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="Vibrate on mirrored alerts"
+                    android:text="Vibrate on alerts"
                     android:textColor="@color/cm_text" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -330,9 +381,18 @@
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="14dp"
-            android:layout_marginBottom="28dp"
             android:text="Save and start"
             android:textSize="16sp"
+            app:cornerRadius="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/testButton"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="28dp"
+            android:text="Send test alert"
             app:cornerRadius="16dp" />
 
     </LinearLayout>
