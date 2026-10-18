@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.CallMirror" parent="Theme.MaterialComponents.Light.NoActionBar" />
+    <style name="Theme.CallMirror" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/cm_primary</item>
+        <item name="colorPrimaryVariant">@color/cm_primary_dark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/cm_background</item>
+        <item name="android:navigationBarColor">@color/cm_background</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
 </resources>
