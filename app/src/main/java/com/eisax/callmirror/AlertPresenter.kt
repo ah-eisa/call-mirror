@@ -11,7 +11,9 @@ object AlertPresenter {
     fun show(context: Context, payload: MirrorPayload) {
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL, "Mirrored alerts", NotificationManager.IMPORTANCE_HIGH)
+            NotificationChannel(CHANNEL, "Mirrored alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+                lockscreenVisibility = android.app.Notification.VISIBILITY_SECRET
+            }
         )
 
         val heading = if (payload.type == MirrorPayload.TYPE_CALL) {
@@ -28,6 +30,8 @@ object AlertPresenter {
             .setStyle(NotificationCompat.BigTextStyle().bigText(detail))
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setLocalOnly(true)
             .build()
 
         manager.notify((System.currentTimeMillis() and 0x7fffffff).toInt(), notification)
