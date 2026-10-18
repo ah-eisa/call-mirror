@@ -6,10 +6,11 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
 
     <application
         android:allowBackup="false"
+        android:usesCleartextTraffic="false"
         android:label="Call Mirror"
         android:supportsRtl="true"
         android:theme="@style/Theme.CallMirror">
@@ -44,7 +45,7 @@
         <service
             android:name=".MirrorService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="remoteMessaging" />
 
     </application>
 </manifest>
