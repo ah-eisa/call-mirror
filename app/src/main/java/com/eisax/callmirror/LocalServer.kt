@@ -7,11 +7,11 @@ import kotlin.concurrent.thread
 class LocalServer(
     private val port: Int,
     private val pairingSecret: String,
-    private val onPayload: (MirrorPayload) -> Unit
+    private val onPayload: (MirrorPayload) -> Unit,
+    private val replayGuard: MessageGuard = MessageGuard(MAX_MESSAGE_AGE_MS, REPLAY_CAPACITY)
 ) {
     @Volatile private var running = false
     private var serverSocket: ServerSocket? = null
-    private val replayGuard = MessageGuard(10 * 60 * 1000L, 512)
     private val connectionLimiter = RateLimiter(GLOBAL_MAX_CONNECTIONS, GLOBAL_WINDOW_MS)
     private val ipLimiters = object : LinkedHashMap<String, RateLimiter>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, RateLimiter>?): Boolean =
@@ -42,6 +42,7 @@ class LocalServer(
                             val payload = MirrorPayload.fromJson(plain) ?: return@use
                             if (!replayGuard.accept(payload.timestamp, payload.messageId)) return@use
                             onPayload(payload)
+                            acknowledge(socket, payload.messageId)
                         }
                     }
                 }
@@ -57,6 +58,23 @@ class LocalServer(
         running = false
         try { serverSocket?.close() } catch (_: Exception) { }
         serverSocket = null
+    }
+
+    /**
+     * Confirms delivery to the sender. The acknowledgement is MAC'd with the CM3
+     * ack key, so a peer without the pairing secret cannot forge one and force
+     * the sender to skip the cloud fallback.
+     */
+    private fun acknowledge(socket: java.net.Socket, messageId: String) {
+        val ack = CryptoUtils.createAck(pairingSecret, messageId) ?: return
+        try {
+            socket.getOutputStream().bufferedWriter(Charsets.UTF_8).use { writer ->
+                writer.write(ack)
+                writer.newLine()
+                writer.flush()
+            }
+        } catch (_: Exception) {
+        }
     }
 
     private fun synchronizedLimiter(remoteIp: String): RateLimiter {
@@ -88,5 +106,7 @@ class LocalServer(
         private const val PER_IP_MAX_CONNECTIONS = 30
         private const val PER_IP_WINDOW_MS = 60_000L
         private const val TRACKED_IPS = 64
+        private const val MAX_MESSAGE_AGE_MS = 10 * 60 * 1000L
+        private const val REPLAY_CAPACITY = 512
     }
 }

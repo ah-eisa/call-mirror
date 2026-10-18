@@ -4,6 +4,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
 import javax.crypto.Cipher
+import javax.crypto.Mac
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
@@ -21,6 +22,7 @@ import javax.crypto.spec.SecretKeySpec
 object CryptoUtils {
     private const val PREFIX_CM3 = "CM3:"
     private const val PREFIX_CM2 = "CM2:"
+    private const val PREFIX_ACK = "CM3A:"
     private const val MIN_SECRET_CHARS = 16
     private const val NONCE_LEN = 12
     private const val TAG_BITS = 128
@@ -67,6 +69,56 @@ object CryptoUtils {
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(("callmirror-topic-v2:" + pairingSecret).toByteArray(Charsets.UTF_8))
         return "callmirror_" + digest.joinToString("") { "%02x".format(it) }.take(32)
+    }
+
+    /**
+     * Builds the authenticated acknowledgement a receiver returns once a local
+     * payload has been decrypted, parsed, deduplicated and delivered. The MAC
+     * is keyed by the CM3 ack key, so only a holder of the pairing secret can
+     * produce an acknowledgement the sender will trust.
+     */
+    fun createAck(pairingSecret: String, messageId: String): String? {
+        return try {
+            require(pairingSecret.length >= MIN_SECRET_CHARS && messageId.isNotBlank())
+            PREFIX_ACK + messageId + ":" + ackMac(pairingSecret, messageId)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * Verifies, in constant time, that [ackLine] acknowledges [expectedMessageId]
+     * and was produced with [pairingSecret].
+     */
+    fun verifyAck(pairingSecret: String, ackLine: String, expectedMessageId: String): Boolean {
+        return try {
+            if (pairingSecret.length < MIN_SECRET_CHARS || !ackLine.startsWith(PREFIX_ACK)) {
+                false
+            } else {
+                val rest = ackLine.removePrefix(PREFIX_ACK)
+                val separator = rest.lastIndexOf(':')
+                if (separator <= 0) {
+                    false
+                } else {
+                    val messageId = rest.substring(0, separator)
+                    val mac = rest.substring(separator + 1)
+                    val expected = ackMac(pairingSecret, messageId)
+                    messageId == expectedMessageId &&
+                        MessageDigest.isEqual(
+                            mac.toByteArray(Charsets.UTF_8),
+                            expected.toByteArray(Charsets.UTF_8)
+                        )
+                }
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun ackMac(pairingSecret: String, messageId: String): String {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(Cm3Keys.forSecret(pairingSecret).ackKey)
+        return mac.doFinal(messageId.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
 
     private fun decryptCm3(cipherText: String, pairingSecret: String): String? {

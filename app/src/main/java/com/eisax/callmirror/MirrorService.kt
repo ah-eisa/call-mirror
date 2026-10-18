@@ -56,10 +56,20 @@ class MirrorService : Service() {
         if (secret.length < 16) return
 
         val deliver: (MirrorPayload) -> Unit = { AlertPresenter.show(this, it) }
-        relay = CloudRelay(secret, onPayload = deliver).also { it.connect() }
+
+        // One guard across both transports, so a payload that was already
+        // delivered locally is not re-alerted when the cloud copy arrives (or
+        // vice versa) — including when a local send falls back to the cloud.
+        val guard = MessageGuard(MAX_MESSAGE_AGE_MS, REPLAY_CAPACITY)
+        relay = CloudRelay(secret, onPayload = deliver, replayGuard = guard).also { it.connect() }
 
         if (MirrorPrefs.localEnabled(this)) {
-            localServer = LocalServer(MirrorPrefs.localPort(this), secret, deliver).also { it.start() }
+            localServer = LocalServer(MirrorPrefs.localPort(this), secret, deliver, guard).also { it.start() }
         }
+    }
+
+    private companion object {
+        const val MAX_MESSAGE_AGE_MS = 10 * 60 * 1000L
+        const val REPLAY_CAPACITY = 512
     }
 }

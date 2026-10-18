@@ -21,7 +21,8 @@ import java.util.concurrent.TimeUnit
 class CloudRelay(
     private val pairingSecret: String,
     private val onPayload: (MirrorPayload) -> Unit,
-    private val onConnectionChanged: ((Boolean) -> Unit)? = null
+    private val onConnectionChanged: ((Boolean) -> Unit)? = null,
+    private val replayGuard: MessageGuard = MessageGuard(MAX_MESSAGE_AGE_MS, REPLAY_CAPACITY)
 ) {
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
@@ -34,8 +35,6 @@ class CloudRelay(
     private var socket: WebSocket? = null
     @Volatile private var shouldStayConnected = false
     @Volatile private var reconnectAttempt = 0
-
-    private val replayGuard = MessageGuard(MAX_MESSAGE_AGE_MS, 256)
 
     fun connect() {
         if (pairingSecret.length < 16 || socket != null) return
@@ -105,6 +104,7 @@ class CloudRelay(
     companion object {
         private const val TAG = "CloudRelay"
         private const val MAX_MESSAGE_AGE_MS = 10 * 60 * 1000L
+        private const val REPLAY_CAPACITY = 256
         private const val RECONNECT_BASE_MS = 5_000L
         private const val RECONNECT_MAX_SHIFT = 6
         private const val RECONNECT_MAX_MS = 5 * 60 * 1000L
