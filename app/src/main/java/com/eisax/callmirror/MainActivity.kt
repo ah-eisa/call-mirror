@@ -27,6 +27,11 @@ class MainActivity : AppCompatActivity() {
 
         binding.secretInput.setText(MirrorPrefs.secret(this))
         binding.notificationSwitch.isChecked = MirrorPrefs.mirrorNotifications(this)
+        binding.localModeSwitch.isChecked = MirrorPrefs.localEnabled(this)
+        binding.localHostInput.setText(MirrorPrefs.localHost(this))
+        binding.localPortInput.setText(MirrorPrefs.localPort(this).toString())
+        binding.ringtoneSwitch.isChecked = MirrorPrefs.ringtone(this)
+        binding.vibrateSwitch.isChecked = MirrorPrefs.vibrate(this)
         binding.roleSender.isChecked = MirrorPrefs.role(this) == MirrorPrefs.ROLE_SENDER
         binding.roleReceiver.isChecked = MirrorPrefs.role(this) == MirrorPrefs.ROLE_RECEIVER
 
@@ -45,10 +50,19 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             binding.secretLayout.error = null
+
             val role = if (binding.roleReceiver.isChecked) MirrorPrefs.ROLE_RECEIVER else MirrorPrefs.ROLE_SENDER
+            val port = binding.localPortInput.text?.toString()?.toIntOrNull() ?: MirrorPrefs.DEFAULT_PORT
+
             MirrorPrefs.setRole(this, role)
             MirrorPrefs.setSecret(this, secret)
             MirrorPrefs.setMirrorNotifications(this, binding.notificationSwitch.isChecked)
+            MirrorPrefs.setLocalEnabled(this, binding.localModeSwitch.isChecked)
+            MirrorPrefs.setLocalHost(this, binding.localHostInput.text?.toString().orEmpty())
+            MirrorPrefs.setLocalPort(this, port)
+            MirrorPrefs.setRingtone(this, binding.ringtoneSwitch.isChecked)
+            MirrorPrefs.setVibrate(this, binding.vibrateSwitch.isChecked)
+
             requestRuntimePermissions(role)
 
             val serviceIntent = Intent(this, MirrorService::class.java)
@@ -57,7 +71,12 @@ class MainActivity : AppCompatActivity() {
             } else {
                 stopService(serviceIntent)
             }
-            binding.statusText.text = if (role == MirrorPrefs.ROLE_RECEIVER) "Receiver active" else "Sender configured"
+
+            binding.statusText.text = if (role == MirrorPrefs.ROLE_RECEIVER) {
+                if (binding.localModeSwitch.isChecked) "Receiver active: Cloud + Local" else "Receiver active: Cloud"
+            } else {
+                if (binding.localModeSwitch.isChecked) "Transmitter active: Local first, Cloud fallback" else "Transmitter active: Cloud"
+            }
         }
     }
 
