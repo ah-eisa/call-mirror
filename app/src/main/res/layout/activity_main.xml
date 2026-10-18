@@ -22,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Connect two Android devices you own."
+            android:text="Secure cloud sync with optional local / hotspot fast path."
             android:textSize="15sp" />
 
         <RadioGroup
@@ -36,7 +36,7 @@
                 android:id="@+id/roleSender"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Sender" />
+                android:text="Transmitter" />
 
             <RadioButton
                 android:id="@+id/roleReceiver"
@@ -84,6 +84,56 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Notification access" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/localModeSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Use local / hotspot mode when available" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Receiver IP / host (Transmitter only)">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/localHostInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textUri"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Port (default 8080)">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/localPortInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/ringtoneSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:checked="true"
+            android:text="Play ringtone on mirrored alert" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/vibrateSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Vibrate on mirrored alert" />
 
         <Button
             android:id="@+id/saveButton"
