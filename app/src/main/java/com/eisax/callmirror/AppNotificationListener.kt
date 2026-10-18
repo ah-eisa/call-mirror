@@ -10,6 +10,7 @@ class AppNotificationListener : NotificationListenerService() {
         if (!MirrorPrefs.mirrorNotifications(this)) return
         if (MirrorPrefs.role(this) != MirrorPrefs.ROLE_SENDER) return
         if (sbn.packageName == packageName) return
+        if (isFiltered(sbn.packageName)) return
 
         val notification = sbn.notification ?: return
         val extras = notification.extras ?: return
@@ -47,5 +48,13 @@ class AppNotificationListener : NotificationListenerService() {
                 text = body.takeIf { it.isNotBlank() }
             )
         )
+    }
+
+    private fun isFiltered(sourcePackage: String): Boolean {
+        return when (MirrorPrefs.notificationFilterMode(this)) {
+            MirrorPrefs.FILTER_ALLOWLIST -> !MirrorPrefs.allowlist(this).contains(sourcePackage)
+            MirrorPrefs.FILTER_BLOCKLIST -> MirrorPrefs.blocklist(this).contains(sourcePackage)
+            else -> false
+        }
     }
 }

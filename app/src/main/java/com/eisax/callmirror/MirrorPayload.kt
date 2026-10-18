@@ -13,6 +13,7 @@ data class MirrorPayload(
     val messageId: String = UUID.randomUUID().toString()
 ) {
     fun toJson(): String = JSONObject().apply {
+        put("version", SCHEMA_VERSION)
         put("type", type)
         put("appName", appName)
         put("title", title)
@@ -25,14 +26,16 @@ data class MirrorPayload(
     companion object {
         const val TYPE_NOTIFICATION = "notification"
         const val TYPE_CALL = "call"
+        const val SCHEMA_VERSION = 1
 
         fun fromJson(raw: String): MirrorPayload? {
             return try {
                 val o = JSONObject(raw)
                 val type = o.getString("type")
                 val messageId = o.optString("messageId")
+                val version = o.optInt("version", SCHEMA_VERSION)
                 val validType = type == TYPE_NOTIFICATION || type == TYPE_CALL
-                if (validType && messageId.isNotBlank()) {
+                if (validType && messageId.isNotBlank() && version == SCHEMA_VERSION) {
                     MirrorPayload(
                         type = type,
                         appName = o.optString("appName").takeIf { it.isNotBlank() && it != "null" },

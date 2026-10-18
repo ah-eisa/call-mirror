@@ -1,12 +1,14 @@
 package com.eisax.callmirror
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -20,10 +22,14 @@ import java.security.SecureRandom
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private var advancedVisible = false
+    private lateinit var allowlist: Set<String>
+    private lateinit var blocklist: Set<String>
 
     private val permissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { }
+    ) { granted ->
+        reportDeniedPermissions(granted)
+    }
 
     private val qrScanner = registerForActivityResult(ScanContract()) { result ->
         val raw = result.contents ?: return@registerForActivityResult
@@ -49,6 +55,17 @@ class MainActivity : AppCompatActivity() {
         binding.localPortInput.setText(MirrorPrefs.localPort(this).toString())
         binding.ringtoneSwitch.isChecked = MirrorPrefs.ringtone(this)
         binding.vibrateSwitch.isChecked = MirrorPrefs.vibrate(this)
+
+        allowlist = MirrorPrefs.allowlist(this)
+        blocklist = MirrorPrefs.blocklist(this)
+        when (MirrorPrefs.notificationFilterMode(this)) {
+            MirrorPrefs.FILTER_ALLOWLIST -> binding.filterAllowlist.isChecked = true
+            MirrorPrefs.FILTER_BLOCKLIST -> binding.filterBlocklist.isChecked = true
+            else -> binding.filterAll.isChecked = true
+        }
+
+        binding.filterModeGroup.setOnCheckedChangeListener { _, _ -> updateFilterUi() }
+        binding.filterAppsButton.setOnClickListener { chooseFilterApps() }
 
         val savedRole = MirrorPrefs.role(this)
         binding.roleSender.isChecked = savedRole == MirrorPrefs.ROLE_SENDER
@@ -130,6 +147,84 @@ class MainActivity : AppCompatActivity() {
         binding.statusText.text = "Test alert sent • check the receiver phone"
     }
 
+    private fun reportDeniedPermissions(granted: Map<String, Boolean>) {
+        val deniedLabels = granted.filterValues { !it }.keys.mapNotNull { permission ->
+            when (permission) {
+                Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG -> "call mirroring"
+                Manifest.permission.POST_NOTIFICATIONS -> "showing alerts"
+                else -> null
+            }
+        }.distinct()
+        if (deniedLabels.isNotEmpty()) {
+            Toast.makeText(
+                this,
+                "Needed permissions were denied: ${deniedLabels.joinToString(", ")}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun chooseFilterApps() {
+        val allowMode = binding.filterAllowlist.isChecked
+        showAppFilterDialog(if (allowMode) allowlist else blocklist) { selected ->
+            if (allowMode) allowlist = selected else blocklist = selected
+            updateFilterUi()
+        }
+    }
+
+    private fun showAppFilterDialog(initialChecked: Set<String>, onResult: (Set<String>) -> Unit) {
+        val installed = packageManager
+            .getInstalledApplications(PackageManager.GET_META_DATA)
+            .filter { it.packageName != packageName && it.enabled }
+            .map { info -> info.packageName to labelFor(info) }
+            .sortedBy { it.second.lowercase() }
+
+        val labels = installed.map { it.second }.toTypedArray()
+        val checked = BooleanArray(installed.size) { initialChecked.contains(installed[it].first) }
+
+        AlertDialog.Builder(this)
+            .setTitle("Choose apps")
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setPositiveButton("Save") { _, _ ->
+                onResult(installed.withIndex().filter { checked[it.index] }.map { it.value.first }.toSet())
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun labelFor(info: android.content.pm.ApplicationInfo): String {
+        return try {
+            packageManager.getApplicationLabel(info).toString()
+        } catch (_: Exception) {
+            info.packageName
+        }
+    }
+
+    private fun currentFilterMode(): String {
+        return when {
+            binding.filterAllowlist.isChecked -> MirrorPrefs.FILTER_ALLOWLIST
+            binding.filterBlocklist.isChecked -> MirrorPrefs.FILTER_BLOCKLIST
+            else -> MirrorPrefs.FILTER_ALL
+        }
+    }
+
+    private fun updateFilterUi() {
+        val mode = currentFilterMode()
+        val hasSelection = mode != MirrorPrefs.FILTER_ALL
+        binding.filterAppsButton.visibility = if (hasSelection) View.VISIBLE else View.GONE
+        binding.filterSummaryText.visibility = if (hasSelection) View.VISIBLE else View.GONE
+        if (!hasSelection) return
+
+        binding.filterSummaryText.text = when (mode) {
+            MirrorPrefs.FILTER_ALLOWLIST ->
+                if (allowlist.isEmpty()) "No apps chosen yet — mirroring is paused until you choose"
+                else "${allowlist.size} ${if (allowlist.size == 1) "app" else "apps"} will be mirrored"
+            else ->
+                if (blocklist.isEmpty()) "No apps blocked"
+                else "${blocklist.size} ${if (blocklist.size == 1) "app" else "apps"} will be blocked"
+        }
+    }
+
     private fun saveAndStart(): Boolean {
         val secret = binding.secretInput.text?.toString()?.trim().orEmpty()
         if (secret.length < 16) {
@@ -164,6 +259,9 @@ class MainActivity : AppCompatActivity() {
         MirrorPrefs.setRole(this, role)
         MirrorPrefs.setSecret(this, secret)
         MirrorPrefs.setMirrorNotifications(this, binding.notificationSwitch.isChecked)
+        MirrorPrefs.setNotificationFilterMode(this, currentFilterMode())
+        MirrorPrefs.setAllowlist(this, allowlist)
+        MirrorPrefs.setBlocklist(this, blocklist)
         MirrorPrefs.setLocalEnabled(this, localEnabled)
         MirrorPrefs.setLocalHost(this, localHost)
         MirrorPrefs.setLocalPort(this, port)

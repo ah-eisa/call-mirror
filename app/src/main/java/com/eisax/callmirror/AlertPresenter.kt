@@ -47,6 +47,6 @@ object AlertPresenter {
         }
         if (vibrate) builder.setVibrate(longArrayOf(0, 250, 150, 350))
 
-        manager.notify((System.currentTimeMillis() and 0x7fffffff).toInt(), builder.build())
+        manager.notify(payload.messageId.hashCode(), builder.build())
     }
 }

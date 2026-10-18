@@ -310,6 +310,66 @@
                     android:text="Messages and notifications"
                     android:textColor="@color/cm_text" />
 
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="App filtering"
+                    android:textColor="@color/cm_text"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:id="@+id/filterModeGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="vertical">
+
+                    <RadioButton
+                        android:id="@+id/filterAll"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:paddingVertical="4dp"
+                        android:text="All apps"
+                        android:textColor="@color/cm_text" />
+
+                    <RadioButton
+                        android:id="@+id/filterAllowlist"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="4dp"
+                        android:text="Only apps I choose"
+                        android:textColor="@color/cm_text" />
+
+                    <RadioButton
+                        android:id="@+id/filterBlocklist"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="4dp"
+                        android:text="All apps except ones I block"
+                        android:textColor="@color/cm_text" />
+                </RadioGroup>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/filterAppsButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:visibility="gone"
+                    android:text="Choose apps" />
+
+                <TextView
+                    android:id="@+id/filterSummaryText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:visibility="gone"
+                    android:textColor="@color/cm_text_muted"
+                    android:textSize="13sp" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/notificationAccessButton"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"

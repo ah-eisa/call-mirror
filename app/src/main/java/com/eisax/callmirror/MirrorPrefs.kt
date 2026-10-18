@@ -11,9 +11,15 @@ object MirrorPrefs {
     private const val KEY_LOCAL_PORT = "local_port"
     private const val KEY_RINGTONE = "ringtone"
     private const val KEY_VIBRATE = "vibrate"
+    private const val KEY_FILTER_MODE = "notification_filter_mode"
+    private const val KEY_ALLOWLIST = "notification_allowlist"
+    private const val KEY_BLOCKLIST = "notification_blocklist"
 
     const val ROLE_SENDER = "sender"
     const val ROLE_RECEIVER = "receiver"
+    const val FILTER_ALL = "all"
+    const val FILTER_ALLOWLIST = "allowlist"
+    const val FILTER_BLOCKLIST = "blocklist"
     const val DEFAULT_PORT = 8080
 
     private fun prefs(context: Context) = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -41,4 +47,29 @@ object MirrorPrefs {
 
     fun vibrate(context: Context): Boolean = prefs(context).getBoolean(KEY_VIBRATE, true)
     fun setVibrate(context: Context, enabled: Boolean) { prefs(context).edit().putBoolean(KEY_VIBRATE, enabled).apply() }
+
+    fun notificationFilterMode(context: Context): String {
+        val mode = prefs(context).getString(KEY_FILTER_MODE, FILTER_ALL) ?: FILTER_ALL
+        return if (mode == FILTER_ALLOWLIST || mode == FILTER_BLOCKLIST) mode else FILTER_ALL
+    }
+
+    fun setNotificationFilterMode(context: Context, mode: String) {
+        prefs(context).edit().putString(KEY_FILTER_MODE, mode).apply()
+    }
+
+    fun allowlist(context: Context): Set<String> {
+        return prefs(context).getStringSet(KEY_ALLOWLIST, emptySet())?.toSet() ?: emptySet()
+    }
+
+    fun setAllowlist(context: Context, packages: Set<String>) {
+        prefs(context).edit().putStringSet(KEY_ALLOWLIST, packages).apply()
+    }
+
+    fun blocklist(context: Context): Set<String> {
+        return prefs(context).getStringSet(KEY_BLOCKLIST, emptySet())?.toSet() ?: emptySet()
+    }
+
+    fun setBlocklist(context: Context, packages: Set<String>) {
+        prefs(context).edit().putStringSet(KEY_BLOCKLIST, packages).apply()
+    }
 }
