@@ -78,11 +78,10 @@ class LocalServer(
     private fun acknowledge(socket: java.net.Socket, messageId: String) {
         val ack = CryptoUtils.createAck(pairingSecret, messageId) ?: return
         try {
-            socket.getOutputStream().bufferedWriter(Charsets.UTF_8).use { writer ->
-                writer.write(ack)
-                writer.newLine()
-                writer.flush()
-            }
+            val writer = socket.getOutputStream().writer(Charsets.UTF_8)
+            writer.write(ack)
+            writer.write("\n")
+            writer.flush()
         } catch (_: Exception) {
         }
     }

@@ -22,11 +22,12 @@ object LocalTransport {
             Socket().use { socket ->
                 socket.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT_MS)
                 socket.soTimeout = READ_TIMEOUT_MS
-                socket.getOutputStream().bufferedWriter(Charsets.UTF_8).use { writer ->
-                    writer.write(encrypted)
-                    writer.newLine()
-                    writer.flush()
-                }
+                // Note: closing the socket's output stream would close the whole
+                // socket, so the writer is flushed but never closed before the ack read.
+                val writer = socket.getOutputStream().writer(Charsets.UTF_8)
+                writer.write(encrypted)
+                writer.write("\n")
+                writer.flush()
                 readAckLine(socket.getInputStream())
             }
         } catch (_: Exception) {
