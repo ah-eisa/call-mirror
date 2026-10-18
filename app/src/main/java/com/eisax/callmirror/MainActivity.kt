@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -20,6 +21,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -29,8 +31,7 @@ class MainActivity : AppCompatActivity() {
         binding.roleReceiver.isChecked = MirrorPrefs.role(this) == MirrorPrefs.ROLE_RECEIVER
 
         binding.generateButton.setOnClickListener {
-            val secret = generateSecret()
-            binding.secretInput.setText(secret)
+            binding.secretInput.setText(generateSecret())
         }
 
         binding.notificationAccessButton.setOnClickListener {
@@ -48,22 +49,30 @@ class MainActivity : AppCompatActivity() {
             MirrorPrefs.setRole(this, role)
             MirrorPrefs.setSecret(this, secret)
             MirrorPrefs.setMirrorNotifications(this, binding.notificationSwitch.isChecked)
-            requestRuntimePermissions()
-            ContextCompat.startForegroundService(this, Intent(this, MirrorService::class.java))
+            requestRuntimePermissions(role)
+
+            val serviceIntent = Intent(this, MirrorService::class.java)
+            if (role == MirrorPrefs.ROLE_RECEIVER) {
+                ContextCompat.startForegroundService(this, serviceIntent)
+            } else {
+                stopService(serviceIntent)
+            }
             binding.statusText.text = if (role == MirrorPrefs.ROLE_RECEIVER) "Receiver active" else "Sender configured"
         }
     }
 
-    private fun requestRuntimePermissions() {
+    private fun requestRuntimePermissions(role: String) {
         val wanted = mutableListOf<String>()
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             wanted += Manifest.permission.POST_NOTIFICATIONS
         }
-        if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-            wanted += Manifest.permission.READ_PHONE_STATE
-        }
-        if (checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
-            wanted += Manifest.permission.READ_CALL_LOG
+        if (role == MirrorPrefs.ROLE_SENDER) {
+            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+                wanted += Manifest.permission.READ_PHONE_STATE
+            }
+            if (checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+                wanted += Manifest.permission.READ_CALL_LOG
+            }
         }
         if (wanted.isNotEmpty()) permissionsLauncher.launch(wanted.toTypedArray())
     }
