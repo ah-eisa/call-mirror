@@ -1,8 +1,6 @@
 package com.eisax.callmirror
 
 import java.net.ServerSocket
-import java.util.Collections
-import java.util.LinkedHashMap
 import kotlin.concurrent.thread
 
 class LocalServer(
@@ -12,9 +10,7 @@ class LocalServer(
 ) {
     @Volatile private var running = false
     private var serverSocket: ServerSocket? = null
-    private val seen = Collections.synchronizedMap(object : LinkedHashMap<String, Long>(256, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?): Boolean = size > 512
-    })
+    private val replayGuard = MessageGuard(10 * 60 * 1000L, 512)
 
     fun start() {
         if (running || pairingSecret.length < 16) return
@@ -30,8 +26,7 @@ class LocalServer(
                             val line = socket.getInputStream().bufferedReader(Charsets.UTF_8).readLine() ?: return@use
                             val plain = CryptoUtils.decrypt(line, pairingSecret) ?: return@use
                             val payload = MirrorPayload.fromJson(plain) ?: return@use
-                            if (!isFresh(payload.timestamp)) return@use
-                            if (seen.putIfAbsent(payload.messageId, System.currentTimeMillis()) != null) return@use
+                            if (!replayGuard.accept(payload.timestamp, payload.messageId)) return@use
                             onPayload(payload)
                         }
                     }
@@ -48,11 +43,5 @@ class LocalServer(
         running = false
         try { serverSocket?.close() } catch (_: Exception) { }
         serverSocket = null
-    }
-
-    private fun isFresh(timestamp: Long): Boolean {
-        if (timestamp <= 0L) return false
-        val age = kotlin.math.abs(System.currentTimeMillis() - timestamp)
-        return age <= 10 * 60 * 1000L
     }
 }

@@ -16,10 +16,7 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONObject
 import java.security.SecureRandom
-import java.util.Collections
-import java.util.LinkedHashMap
 import java.util.concurrent.TimeUnit
-import kotlin.math.abs
 
 class CloudRelay(
     private val pairingSecret: String,
@@ -38,11 +35,7 @@ class CloudRelay(
     @Volatile private var shouldStayConnected = false
     @Volatile private var reconnectAttempt = 0
 
-    private val recentMessageIds = Collections.synchronizedMap(
-        object : LinkedHashMap<String, Boolean>(256, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?): Boolean = size > 256
-        }
-    )
+    private val replayGuard = MessageGuard(MAX_MESSAGE_AGE_MS, 256)
 
     fun connect() {
         if (pairingSecret.length < 16 || socket != null) return
@@ -66,9 +59,7 @@ class CloudRelay(
                     val plain = CryptoUtils.decrypt(encrypted, pairingSecret) ?: return@launch
                     val payload = MirrorPayload.fromJson(plain) ?: return@launch
 
-                    val now = System.currentTimeMillis()
-                    if (abs(now - payload.timestamp) > MAX_MESSAGE_AGE_MS) return@launch
-                    if (recentMessageIds.put(payload.messageId, true) != null) return@launch
+                    if (!replayGuard.accept(payload.timestamp, payload.messageId)) return@launch
 
                     onPayload(payload)
                 }

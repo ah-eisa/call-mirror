@@ -1,6 +1,6 @@
 package com.eisax.callmirror
 
-import android.util.Base64
+import java.util.Base64
 import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -27,7 +27,7 @@ object CryptoUtils {
             cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(TAG_BITS, nonce))
             val ciphertext = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
             val packed = salt + nonce + ciphertext
-            PREFIX + Base64.encodeToString(packed, Base64.NO_WRAP)
+            PREFIX + Base64.getEncoder().encodeToString(packed)
         } catch (_: Exception) {
             null
         }
@@ -38,7 +38,7 @@ object CryptoUtils {
             if (!cipherText.startsWith(PREFIX) || pairingSecret.length < 16) {
                 null
             } else {
-                val packed = Base64.decode(cipherText.removePrefix(PREFIX), Base64.NO_WRAP)
+                val packed = Base64.getDecoder().decode(cipherText.removePrefix(PREFIX))
                 if (packed.size <= SALT_LEN + NONCE_LEN) {
                     null
                 } else {
