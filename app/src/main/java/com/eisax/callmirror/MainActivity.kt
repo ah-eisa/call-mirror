@@ -150,7 +150,7 @@ class MainActivity : AppCompatActivity() {
     private fun reportDeniedPermissions(granted: Map<String, Boolean>) {
         val deniedLabels = granted.filterValues { !it }.keys.mapNotNull { permission ->
             when (permission) {
-                Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG -> "call mirroring"
+                Manifest.permission.READ_PHONE_STATE -> "call mirroring"
                 Manifest.permission.POST_NOTIFICATIONS -> "showing alerts"
                 else -> null
             }
@@ -217,7 +217,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.filterSummaryText.text = when (mode) {
             MirrorPrefs.FILTER_ALLOWLIST ->
-                if (allowlist.isEmpty()) "No apps chosen yet — mirroring is paused until you choose"
+                if (allowlist.isEmpty()) "No apps chosen yet - mirroring is paused until you choose"
                 else "${allowlist.size} ${if (allowlist.size == 1) "app" else "apps"} will be mirrored"
             else ->
                 if (blocklist.isEmpty()) "No apps blocked"
@@ -320,13 +320,8 @@ class MainActivity : AppCompatActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             wanted += Manifest.permission.POST_NOTIFICATIONS
         }
-        if (role == MirrorPrefs.ROLE_SENDER) {
-            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-                wanted += Manifest.permission.READ_PHONE_STATE
-            }
-            if (checkSelfPermission(Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
-                wanted += Manifest.permission.READ_CALL_LOG
-            }
+        if (role == MirrorPrefs.ROLE_SENDER && checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            wanted += Manifest.permission.READ_PHONE_STATE
         }
         if (wanted.isNotEmpty()) permissionsLauncher.launch(wanted.toTypedArray())
     }
