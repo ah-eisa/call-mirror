@@ -23,7 +23,7 @@ object MirrorSender {
             }
 
             if (!sentLocal) {
-                CloudRelay(secret, onPayload = {}).send(payload)
+                CloudRelay.publish(secret, payload)
             }
         }
     }
