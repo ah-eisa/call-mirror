@@ -4,6 +4,8 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 
 class AppNotificationListener : NotificationListenerService() {
+    private val sendLimiter = RateLimiter(MAX_SENDS_PER_WINDOW, SEND_WINDOW_MS)
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
         if (sbn == null) return
@@ -11,6 +13,7 @@ class AppNotificationListener : NotificationListenerService() {
         if (MirrorPrefs.role(this) != MirrorPrefs.ROLE_SENDER) return
         if (sbn.packageName == packageName) return
         if (isFiltered(sbn.packageName)) return
+        if (!sendLimiter.tryAcquire()) return
 
         val notification = sbn.notification ?: return
         val extras = notification.extras ?: return
@@ -56,5 +59,10 @@ class AppNotificationListener : NotificationListenerService() {
             MirrorPrefs.FILTER_BLOCKLIST -> MirrorPrefs.blocklist(this).contains(sourcePackage)
             else -> false
         }
+    }
+
+    companion object {
+        private const val MAX_SENDS_PER_WINDOW = 10
+        private const val SEND_WINDOW_MS = 30_000L
     }
 }
