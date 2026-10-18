@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cm_primary">#4F46E5</color>
+    <color name="cm_primary_dark">#3730A3</color>
+    <color name="cm_primary_soft">#EEF2FF</color>
+    <color name="cm_surface">#FFFFFF</color>
+    <color name="cm_background">#F7F8FC</color>
+    <color name="cm_text">#111827</color>
+    <color name="cm_text_muted">#6B7280</color>
+    <color name="cm_border">#E5E7EB</color>
+    <color name="cm_success">#047857</color>
+    <color name="cm_success_soft">#ECFDF5</color>
+</resources>
