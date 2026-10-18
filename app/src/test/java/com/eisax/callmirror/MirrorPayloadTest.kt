@@ -58,4 +58,18 @@ class MirrorPayloadTest {
         assertEquals("+20100", restored?.caller)
         assertNull(restored?.text)
     }
+
+    @Test
+    fun futureSchemaVersionIsRejected() {
+        val future = """{"version":2,"type":"call","caller":"+20100","messageId":"m1"}"""
+        assertNull(MirrorPayload.fromJson(future))
+    }
+
+    @Test
+    fun missingVersionDefaultsToCurrentSchema() {
+        val legacy = """{"type":"call","caller":"+20100","messageId":"m1"}"""
+        val restored = MirrorPayload.fromJson(legacy)
+        assertNotNull(restored)
+        assertEquals("+20100", restored!!.caller)
+    }
 }

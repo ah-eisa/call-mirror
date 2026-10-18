@@ -15,6 +15,11 @@ class LocalServer(
     )
 ) {
     @Volatile private var running = false
+
+    /** Actual bound port; equals [port] unless [port] was 0 (ephemeral). */
+    @Volatile var boundPort: Int = -1
+        private set
+
     private var serverSocket: ServerSocket? = null
     private val connectionLimiter = RateLimiter(GLOBAL_MAX_CONNECTIONS, GLOBAL_WINDOW_MS)
     private val ipLimiters = object : LinkedHashMap<String, RateLimiter>(64, 0.75f, true) {
@@ -24,36 +29,37 @@ class LocalServer(
 
     fun start() {
         if (running || pairingSecret.length < 16) return
+        val server = try { ServerSocket(port) } catch (_: Exception) { return }
+        serverSocket = server
+        boundPort = server.localPort
         running = true
         thread(name = "CallMirrorLocalServer", isDaemon = true) {
             try {
-                ServerSocket(port).use { server ->
-                    serverSocket = server
-                    while (running) {
-                        val client = try { server.accept() } catch (_: Exception) { break }
-                        val remoteIp = client.inetAddress?.hostAddress ?: "unknown"
-                        val nowMs = System.currentTimeMillis()
-                        if (!connectionLimiter.tryAcquire(nowMs) ||
-                            !synchronizedLimiter(remoteIp).tryAcquire(nowMs)
-                        ) {
-                            client.close()
-                            continue
-                        }
-                        client.use { socket ->
-                            socket.soTimeout = 2000
-                            val line = readPayloadLine(socket) ?: return@use
-                            val plain = CryptoUtils.decrypt(line, pairingSecret) ?: return@use
-                            val payload = MirrorPayload.fromJson(plain) ?: return@use
-                            if (!replayGuard.accept(payload.timestamp, payload.messageId)) return@use
-                            onPayload(payload)
-                            acknowledge(socket, payload.messageId)
-                        }
+                while (running) {
+                    val client = try { server.accept() } catch (_: Exception) { break }
+                    val remoteIp = client.inetAddress?.hostAddress ?: "unknown"
+                    val nowMs = System.currentTimeMillis()
+                    if (!connectionLimiter.tryAcquire(nowMs) ||
+                        !synchronizedLimiter(remoteIp).tryAcquire(nowMs)
+                    ) {
+                        client.close()
+                        continue
+                    }
+                    client.use { socket ->
+                        socket.soTimeout = 2000
+                        val line = readPayloadLine(socket) ?: return@use
+                        val plain = CryptoUtils.decrypt(line, pairingSecret) ?: return@use
+                        val payload = MirrorPayload.fromJson(plain) ?: return@use
+                        if (!replayGuard.accept(payload.timestamp, payload.messageId)) return@use
+                        onPayload(payload)
+                        acknowledge(socket, payload.messageId)
                     }
                 }
             } catch (_: Exception) {
             } finally {
                 running = false
                 serverSocket = null
+                boundPort = -1
             }
         }
     }

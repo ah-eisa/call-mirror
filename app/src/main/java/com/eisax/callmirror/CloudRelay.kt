@@ -111,6 +111,9 @@ class CloudRelay(
         private const val RECONNECT_BASE_MS = 5_000L
         private const val RECONNECT_MAX_SHIFT = 6
         private const val RECONNECT_MAX_MS = 5 * 60 * 1000L
+        private const val DEFAULT_PUBLISH_URL = "https://ntfy.sh"
+
+        private val plainText = "text/plain; charset=utf-8".toMediaType()
 
         private val sharedHttpClient = OkHttpClient.Builder()
             .connectTimeout(12, TimeUnit.SECONDS)
@@ -126,23 +129,34 @@ class CloudRelay(
         fun publish(pairingSecret: String, payload: MirrorPayload) {
             if (pairingSecret.length < 16) return
             publishScope.launch {
-                val encrypted = CryptoUtils.encrypt(payload.toJson(), pairingSecret) ?: return@launch
-                try {
-                    val body = encrypted.toRequestBody("text/plain; charset=utf-8".toMediaType())
-                    val request = Request.Builder()
-                        .url("https://ntfy.sh/${CryptoUtils.topicFor(pairingSecret)}")
-                        .post(body)
-                        .header("Cache", "no")
-                        .header("Firebase", "no")
-                        .build()
-                    sharedHttpClient.newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) {
-                            Log.w(TAG, "Relay publish failed with HTTP ${response.code}")
-                        }
-                    }
-                } catch (_: Exception) {
+                if (!publishNow(DEFAULT_PUBLISH_URL, sharedHttpClient, pairingSecret, payload)) {
                     Log.w(TAG, "Relay publish failed")
                 }
+            }
+        }
+
+        /**
+         * Coroutine-free, log-free publish used by [publish] and by tests.
+         * Returns true only when the relay accepted the encrypted envelope.
+         */
+        fun publishNow(
+            baseUrl: String,
+            client: OkHttpClient,
+            pairingSecret: String,
+            payload: MirrorPayload
+        ): Boolean {
+            if (pairingSecret.length < 16) return false
+            val encrypted = CryptoUtils.encrypt(payload.toJson(), pairingSecret) ?: return false
+            return try {
+                val request = Request.Builder()
+                    .url("${baseUrl.trimEnd('/')}/${CryptoUtils.topicFor(pairingSecret)}")
+                    .post(encrypted.toRequestBody(plainText))
+                    .header("Cache", "no")
+                    .header("Firebase", "no")
+                    .build()
+                client.newCall(request).execute().use { response -> response.isSuccessful }
+            } catch (_: Exception) {
+                false
             }
         }
     }
