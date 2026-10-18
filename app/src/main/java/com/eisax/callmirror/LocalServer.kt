@@ -8,7 +8,11 @@ class LocalServer(
     private val port: Int,
     private val pairingSecret: String,
     private val onPayload: (MirrorPayload) -> Unit,
-    private val replayGuard: MessageGuard = MessageGuard(MAX_MESSAGE_AGE_MS, REPLAY_CAPACITY)
+    private val replayGuard: MessageGuard = MessageGuard(
+        MessageGuard.DEFAULT_MAX_MESSAGE_AGE_MS,
+        REPLAY_CAPACITY,
+        MessageGuard.DEFAULT_DRIFT_TOLERANCE_MS
+    )
 ) {
     @Volatile private var running = false
     private var serverSocket: ServerSocket? = null
@@ -106,7 +110,6 @@ class LocalServer(
         private const val PER_IP_MAX_CONNECTIONS = 30
         private const val PER_IP_WINDOW_MS = 60_000L
         private const val TRACKED_IPS = 64
-        private const val MAX_MESSAGE_AGE_MS = 10 * 60 * 1000L
         private const val REPLAY_CAPACITY = 512
     }
 }

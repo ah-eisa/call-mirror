@@ -60,7 +60,11 @@ class MirrorService : Service() {
         // One guard across both transports, so a payload that was already
         // delivered locally is not re-alerted when the cloud copy arrives (or
         // vice versa) — including when a local send falls back to the cloud.
-        val guard = MessageGuard(MAX_MESSAGE_AGE_MS, REPLAY_CAPACITY)
+        val guard = MessageGuard(
+            MessageGuard.DEFAULT_MAX_MESSAGE_AGE_MS,
+            REPLAY_CAPACITY,
+            MessageGuard.DEFAULT_DRIFT_TOLERANCE_MS
+        )
         relay = CloudRelay(secret, onPayload = deliver, replayGuard = guard).also { it.connect() }
 
         if (MirrorPrefs.localEnabled(this)) {
@@ -69,7 +73,6 @@ class MirrorService : Service() {
     }
 
     private companion object {
-        const val MAX_MESSAGE_AGE_MS = 10 * 60 * 1000L
         const val REPLAY_CAPACITY = 512
     }
 }

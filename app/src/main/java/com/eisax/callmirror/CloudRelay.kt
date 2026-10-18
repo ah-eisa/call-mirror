@@ -22,7 +22,11 @@ class CloudRelay(
     private val pairingSecret: String,
     private val onPayload: (MirrorPayload) -> Unit,
     private val onConnectionChanged: ((Boolean) -> Unit)? = null,
-    private val replayGuard: MessageGuard = MessageGuard(MAX_MESSAGE_AGE_MS, REPLAY_CAPACITY)
+    private val replayGuard: MessageGuard = MessageGuard(
+        MessageGuard.DEFAULT_MAX_MESSAGE_AGE_MS,
+        REPLAY_CAPACITY,
+        MessageGuard.DEFAULT_DRIFT_TOLERANCE_MS
+    )
 ) {
     private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
@@ -103,7 +107,6 @@ class CloudRelay(
 
     companion object {
         private const val TAG = "CloudRelay"
-        private const val MAX_MESSAGE_AGE_MS = 10 * 60 * 1000L
         private const val REPLAY_CAPACITY = 256
         private const val RECONNECT_BASE_MS = 5_000L
         private const val RECONNECT_MAX_SHIFT = 6

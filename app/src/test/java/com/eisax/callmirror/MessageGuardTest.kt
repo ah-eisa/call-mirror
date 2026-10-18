@@ -48,4 +48,40 @@ class MessageGuardTest {
         assertTrue(small.accept(1_000L, "b", nowMs = 2_000L))
         assertTrue(small.accept(1_000L, "a", nowMs = 2_000L))
     }
+
+    @Test
+    fun toleratesPartnerClockAheadThenReCentres() {
+        val guard = MessageGuard(windowMs, 256, driftToleranceMs = 15 * 60 * 1000L)
+        val ahead = 20 * 60 * 1000L
+        assertTrue(guard.accept(now + ahead, "d1", nowMs = now))
+        assertTrue(guard.accept(now + ahead + 60_000L, "d2", nowMs = now + 60_000L))
+    }
+
+    @Test
+    fun toleratesPartnerClockBehindThenReCentres() {
+        val guard = MessageGuard(windowMs, 256, driftToleranceMs = 15 * 60 * 1000L)
+        val behind = 20 * 60 * 1000L
+        assertTrue(guard.accept(now - behind, "e1", nowMs = now))
+        assertTrue(guard.accept(now - behind + 60_000L, "e2", nowMs = now + 60_000L))
+    }
+
+    @Test
+    fun rejectsDriftBeyondBootstrapWindow() {
+        val tolerance = 15 * 60 * 1000L
+        val guard = MessageGuard(windowMs, 256, driftToleranceMs = tolerance)
+        val bootstrap = windowMs + tolerance
+        assertFalse(guard.accept(now + bootstrap + 1, "f1", nowMs = now))
+        assertFalse(guard.accept(now - bootstrap - 1, "f2", nowMs = now))
+    }
+
+    @Test
+    fun keepsStrictPastReplayWindowAfterLearning() {
+        val guard = MessageGuard(windowMs, 256, driftToleranceMs = 15 * 60 * 1000L)
+        assertTrue(guard.accept(now, "g1", nowMs = now))
+        assertFalse(guard.accept(now - windowMs - 1, "g2", nowMs = now))
+    }
+
+    private companion object {
+        const val now = 1_700_000_000_000L
+    }
 }
