@@ -235,7 +235,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Prefer local / hotspot when available"
-                    android:textColor="@color/cm_text" />
+                    android:textColor="@color/cm_text"
+                    app:showText="false" />
 
                 <LinearLayout
                     android:id="@+id/localSenderFields"
@@ -308,7 +309,8 @@
                     android:layout_marginTop="10dp"
                     android:checked="true"
                     android:text="Messages and notifications"
-                    android:textColor="@color/cm_text" />
+                    android:textColor="@color/cm_text"
+                    app:showText="false" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -412,7 +414,8 @@
                     android:layout_marginTop="10dp"
                     android:checked="true"
                     android:text="Ring for mirrored calls"
-                    android:textColor="@color/cm_text" />
+                    android:textColor="@color/cm_text"
+                    app:showText="false" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/vibrateSwitch"
@@ -420,7 +423,8 @@
                     android:layout_height="wrap_content"
                     android:checked="true"
                     android:text="Vibrate on alerts"
-                    android:textColor="@color/cm_text" />
+                    android:textColor="@color/cm_text"
+                    app:showText="false" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
